@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Link from "next/link";
+import { signIn, useSession } from "next-auth/react";
 
 export default function Register() {
+	const { data: session } = useSession();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (session) {
+			router.push("/dashboard");
+		}
+	}, [session, router]);
+
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const router = useRouter();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -33,8 +42,17 @@ export default function Register() {
 			});
 
 			if (response.status === 201) {
-				// Registration successful, redirect to sign-in page
-				router.push("/auth/signin");
+				const signInResult = await signIn("credentials", {
+					redirect: false,
+					email,
+					password,
+				});
+
+				if (signInResult?.error) {
+					router.push("auth/login");
+				} else {
+					router.push("/dashboard");
+				}
 			}
 		} catch (err: any) {
 			// Handle errors
@@ -53,10 +71,10 @@ export default function Register() {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+		<div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
 			<form
 				onSubmit={handleSubmit}
-				className="bg-white p-6 rounded shadow-md w-full max-w-md"
+				className="bg-white dark:bg-gray-700 p-6 rounded shadow-md w-full max-w-md"
 			>
 				<h2 className="text-2xl mb-4 text-center">Register</h2>
 				{error && <p className="text-red-500 mb-4">{error}</p>}
@@ -69,7 +87,7 @@ export default function Register() {
 						id="name"
 						value={name}
 						onChange={(e) => setName(e.target.value)}
-						className="w-full border px-3 py-2 rounded"
+						className="w-full border px-3 py-2 rounded dark:text-black"
 						placeholder="John Doe"
 						required
 					/>
@@ -83,7 +101,7 @@ export default function Register() {
 						id="email"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
-						className="w-full border px-3 py-2 rounded"
+						className="w-full border px-3 py-2 rounded dark:text-black"
 						placeholder="john@example.com"
 						required
 					/>
@@ -97,7 +115,7 @@ export default function Register() {
 						id="password"
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
-						className="w-full border px-3 py-2 rounded"
+						className="w-full border px-3 py-2 rounded dark:text-black"
 						placeholder="••••••••"
 						required
 					/>
@@ -116,10 +134,10 @@ export default function Register() {
 				<p className="mt-4 text-center">
 					Already have an account?{" "}
 					<Link
-						href="/auth/signin"
+						href="/auth/login"
 						className="text-blue-500 hover:underline"
 					>
-						Sign In
+						Login
 					</Link>
 				</p>
 			</form>

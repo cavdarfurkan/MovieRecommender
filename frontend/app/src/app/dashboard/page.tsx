@@ -127,12 +127,12 @@ export default function Dashboard() {
 	}
 
 	// if (!session) {
-		// return <div>Please sign in to access your dashboard.</div>;
+	// return <div>Please sign in to access your dashboard.</div>;
 	// }
 
 	return (
 		<ProtectedRoute>
-			<div className="min-h-screen bg-gray-100 p-4">
+			<div className="min-h-screen p-4">
 				<header className="flex justify-between items-center mb-6">
 					<h1 className="text-3xl">Dashboard</h1>
 					<button

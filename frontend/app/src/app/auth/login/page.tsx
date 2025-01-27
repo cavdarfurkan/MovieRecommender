@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SignIn() {
+	const { data: session } = useSession();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (session) {
+			router.push("/dashboard");
+		}
+	}, [session, router]);
+
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const router = useRouter();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -45,10 +53,10 @@ export default function SignIn() {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+		<div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
 			<form
 				onSubmit={handleSubmit}
-				className="bg-white p-6 rounded shadow-md w-full max-w-md"
+				className="bg-white dark:bg-gray-700 p-6 rounded shadow-md w-full max-w-md"
 			>
 				<h2 className="text-2xl mb-4 text-center">Sign In</h2>
 				{error && <p className="text-red-500 mb-4">{error}</p>}
@@ -61,7 +69,7 @@ export default function SignIn() {
 						id="email"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
-						className="w-full border px-3 py-2 rounded"
+						className="w-full border px-3 py-2 rounded dark:text-black"
 						placeholder="john@example.com"
 						required
 					/>
@@ -75,7 +83,7 @@ export default function SignIn() {
 						id="password"
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
-						className="w-full border px-3 py-2 rounded"
+						className="w-full border px-3 py-2 rounded dark:text-black"
 						placeholder="••••••••"
 						required
 					/>
