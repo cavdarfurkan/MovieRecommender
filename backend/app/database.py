@@ -31,6 +31,18 @@ class Movie(SQLModel, table=True):
     poster_url: Optional[str]
 
 
+class Genre(SQLModel, table=True):
+    """
+    Represents a genre record in the database.
+
+    Attributes:
+        id (int | None): The primary key for the genre table.
+        genre (str): The name of the genre.
+    """
+    id: int | None = Field(default=None, primary_key=True)
+    genre: str
+
+
 class Rating(SQLModel, table=True):
     """
     Represents a rating for a movie by a specific user.
@@ -102,6 +114,7 @@ def create_db_and_tables():
     """
     SQLModel.metadata.create_all(engine)
     populate_movies()
+    populate_genres()
     populate_ratings()
     populate_users()
 
@@ -158,6 +171,30 @@ def populate_movies():
     with Session(engine) as session:
         for movie in movies:
             session.add(movie)
+        session.commit()
+
+
+def populate_genres():
+    """
+    Populate the Genre table in the database with genre data from the 'data/u.genre' file.
+
+    This function checks if there are existing genres in the database. If not, it reads
+    the genre data file, parses each line to extract the genre name and creates a Genre
+    object for each genre. Finally, it adds the genres to the database session and commits
+    the changes.
+    """
+    if count(Genre):
+        return
+
+    with open("data/u.genre") as f:
+        genres = []
+        for line in f:
+            genre = Genre(genre=line.split("|")[0])
+            genres.append(genre)
+
+    with Session(engine) as session:
+        for genre in genres:
+            session.add(genre)
         session.commit()
 
 
@@ -281,6 +318,22 @@ def get_movies(skip: int = 0, limit: int = 100) -> list[Movie]:
             return session.exec(statement).all()
 
         statement = statement.offset(skip).limit(limit)
+        return session.exec(statement).all()
+
+
+def get_movies_by_genre(genre_id: int, skip: int = 0, limit: int = 10) -> list[Movie]:
+    genre = ""
+    with Session(engine) as session:
+        statement = select(Genre).where(Genre.id == genre_id)
+        genre = session.exec(statement).first().genre
+        print(genre)
+
+    if not genre:
+        return []
+
+    with Session(engine) as session:
+        statement = select(Movie).where(
+            Movie.genres.like(f"%{genre}%")).offset(skip).limit(limit)
         return session.exec(statement).all()
 
 

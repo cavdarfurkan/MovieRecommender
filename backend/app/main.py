@@ -253,6 +253,26 @@ def read_movies(skip: int = 0, limit: int = 100):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/movies/genre/{genre_id}", response_model=list[db.Movie])
+def read_movies_by_genre(genre_id: int, skip: int = 0, limit: int = 10):
+    """
+    Retrieve a list of movies by genre.
+
+    Args:
+        genre_id (int): The genre id of movies.
+        skip (int, optional): Number of movies to skip. Defaults to 0.
+        limit (int, optional): Number of movies to retrieve. Defaults to 10.
+
+    Returns:
+        List[Movie]: A list of movies in the specified genre.
+    """
+    try:
+        movies = db.get_movies_by_genre(genre_id, skip=skip, limit=limit)
+        return movies
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.put("/movies/{movie_id}", response_model=db.Movie)
 def update_movie(movie_id: int, request: SaveMovieRequest):
     """
