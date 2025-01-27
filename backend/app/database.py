@@ -53,18 +53,18 @@ class Rating(SQLModel, table=True):
         CheckConstraint('rating >= 1 AND rating <= 5', name='check_rating'),
     )
 
+
 class User(SQLModel, table=True):
     """
     Represents a user in the database.
 
     Attributes:
         id (int | None): The primary key for the user table.
-        username (str): The username of the user.
-        email (str): The email address of the user.
-        password (str): The password of the user.
+        user_id (int): A unique identifier for the user.
     """
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(sa_column_kwargs={"unique": True})
+
 
 class Watched(SQLModel, table=True):
     """
@@ -185,6 +185,7 @@ def populate_ratings():
             session.add(rating)
         session.commit()
 
+
 def populate_users():
     """
     Populate the User table in the database with user data from the 'data/u.user' file.
@@ -196,18 +197,19 @@ def populate_users():
     """
     if count(User):
         return
-    
+
     with open("data/u.user") as f:
         users = []
         for line in f:
             user_id = line.split("|")[0]
             user = User(user_id=user_id)
             users.append(user)
-        
+
     with Session(engine) as session:
         for user in users:
             session.add(user)
         session.commit()
+
 
 def count(table: type[SQLModel]) -> bool:
     """
@@ -434,22 +436,22 @@ def delete_rating(rating_id: int) -> bool:
 # User CRUD
 ############################################
 
-def create_user(user_data: dict) -> User:
+def create_user(user: User) -> User:
     """
     Creates a new user in the database.
 
     Args:
-        user_data (dict): A dictionary containing user information.
+        user (User): The User object to add.
 
     Returns:
         User: The created User object.
     """
     with Session(engine) as session:
-        new_user = User(**user_data)
-        session.add(new_user)
+        session.add(user)
         session.commit()
-        session.refresh(new_user)
-        return new_user
+        session.refresh(user)
+        return user
+
 
 def get_user(user_id: int) -> Optional[User]:
     """
@@ -463,6 +465,7 @@ def get_user(user_id: int) -> Optional[User]:
     """
     with Session(engine) as session:
         return session.get(User, user_id)
+
 
 def update_user(user_id: int, update_data: dict) -> Optional[User]:
     """
@@ -484,6 +487,7 @@ def update_user(user_id: int, update_data: dict) -> Optional[User]:
         session.commit()
         session.refresh(user)
         return user
+
 
 def delete_user(user_id: int) -> bool:
     """
@@ -507,22 +511,23 @@ def delete_user(user_id: int) -> bool:
 # Watched CRUD
 ############################################
 
-def create_watched(watched_data: dict) -> Watched:
+
+def create_watched(watched: Watched) -> Watched:
     """
     Creates a new watched entry in the database.
 
     Args:
-        watched_data (dict): A dictionary containing watched information.
+        watched (Watched): The Watched object to add.
 
     Returns:
         Watched: The created Watched object.
     """
     with Session(engine) as session:
-        new_watched = Watched(**watched_data)
-        session.add(new_watched)
+        session.add(watched)
         session.commit()
-        session.refresh(new_watched)
-        return new_watched
+        session.refresh(watched)
+        return watched
+
 
 def get_watched(watched_id: int) -> Optional[Watched]:
     """
@@ -536,6 +541,7 @@ def get_watched(watched_id: int) -> Optional[Watched]:
     """
     with Session(engine) as session:
         return session.get(Watched, watched_id)
+
 
 def update_watched(watched_id: int, update_data: dict) -> Optional[Watched]:
     """
@@ -557,6 +563,7 @@ def update_watched(watched_id: int, update_data: dict) -> Optional[Watched]:
         session.commit()
         session.refresh(watched)
         return watched
+
 
 def delete_watched(watched_id: int) -> bool:
     """

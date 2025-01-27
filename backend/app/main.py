@@ -47,58 +47,6 @@ async def lifespan(app: FastAPI):
         print("Error loading model", e)
 
 
-class PredictionRequest(BaseModel):
-    """
-    PredictionRequest represents a request for movie prediction containing the following fields:
-
-    Attributes:
-        user_id (int): The ID of the user.
-        movie_id (int): The ID of the movie.
-    """
-    user_id: int
-    movie_id: int
-
-
-class SaveMovieRequest(BaseModel):
-    """
-    SaveMovieRequest is a Pydantic model for handling movie save requests.
-
-    Attributes:
-        movie_id (int): The unique identifier for the movie.
-        movie_title (str): The title of the movie.
-        release_date (Optional[str]): The release date of the movie, if available.
-        genres (Union[str, None]): The genres of the movie, if available.
-        url (Optional[str]): The URL for more information about the movie, if available.
-        poster_url (Optional[str]): The URL for the movie's poster image, if available.
-    """
-    movie_id: int
-    movie_title: str
-    release_date: Optional[str]
-    genres: Union[str, None]
-    url: Optional[str]
-    poster_url: Optional[str]
-
-
-class SaveRatingRequest(BaseModel):
-    """
-    Data model for saving a movie rating.
-
-    Attributes:
-        user_id (int): The ID of the user providing the rating.
-        movie_id (int): The ID of the movie being rated.
-        rating (float): The rating given to the movie by the user.
-    """
-    user_id: int
-    movie_id: int
-    rating: float
-
-# class ExportCSVRequest(BaseModel):
-    # file_name: str
-
-class Recommendation(BaseModel):
-    movie: db.Movie
-    prediction_rating: float
-
 app = FastAPI(title="Movie Recommender API", version="1.0", lifespan=lifespan)
 
 # CORS configuration
@@ -139,6 +87,27 @@ def health():
     return {"status": "ok"}
 
 
+######################
+# Prediction Endpoints
+######################
+
+class PredictionRequest(BaseModel):
+    """
+    PredictionRequest represents a request for movie prediction containing the following fields:
+
+    Attributes:
+        user_id (int): The ID of the user.
+        movie_id (int): The ID of the movie.
+    """
+    user_id: int
+    movie_id: int
+
+
+class Recommendation(BaseModel):
+    movie: db.Movie
+    prediction_rating: float
+
+
 @app.post("/predict")
 def predict_rating(request: PredictionRequest):
     """
@@ -154,7 +123,8 @@ def predict_rating(request: PredictionRequest):
         HTTPException: If an error occurs during prediction, an HTTP 500 error is raised with the error details.
     """
     try:
-        prediction = predict.predict_for_user(model, request.user_id, request.movie_id)
+        prediction = predict.predict_for_user(
+            model, request.user_id, request.movie_id)
         return {
             "user_id": request.user_id,
             "movie_id": request.movie_id,
@@ -180,8 +150,9 @@ def get_recommendations(user_id: int, top_n: int = 10):
         HTTPException: If an error occurs during the recommendation process, an HTTP 500 error is raised with the error details.
     """
     try:
-        user_recs = predict.predict_top_n_for_user(model, user_id=user_id, top_n=top_n)
-        
+        user_recs = predict.predict_top_n_for_user(
+            model, user_id=user_id, top_n=top_n)
+
         recommendations = []
         for rec in user_recs:
             print(rec)
@@ -200,6 +171,26 @@ def get_recommendations(user_id: int, top_n: int = 10):
 ######################
 # Movie Endpoints
 ######################
+
+class SaveMovieRequest(BaseModel):
+    """
+    SaveMovieRequest is a Pydantic model for handling movie save requests.
+
+    Attributes:
+        movie_id (int): The unique identifier for the movie.
+        movie_title (str): The title of the movie.
+        release_date (Optional[str]): The release date of the movie, if available.
+        genres (Union[str, None]): The genres of the movie, if available.
+        url (Optional[str]): The URL for more information about the movie, if available.
+        poster_url (Optional[str]): The URL for the movie's poster image, if available.
+    """
+    movie_id: int
+    movie_title: str
+    release_date: Optional[str]
+    genres: Union[str, None]
+    url: Optional[str]
+    poster_url: Optional[str]
+
 
 @app.post("/movies", response_model=db.Movie)
 def create_movie(request: SaveMovieRequest):
@@ -317,6 +308,20 @@ def delete_movie(movie_id: int):
 # Rating Endpoints
 ######################
 
+class SaveRatingRequest(BaseModel):
+    """
+    Data model for saving a movie rating.
+
+    Attributes:
+        user_id (int): The ID of the user providing the rating.
+        movie_id (int): The ID of the movie being rated.
+        rating (float): The rating given to the movie by the user.
+    """
+    user_id: int
+    movie_id: int
+    rating: float
+
+
 @app.post("/ratings", response_model=db.Rating)
 def create_rating(request: SaveRatingRequest):
     """
@@ -430,99 +435,122 @@ def delete_rating(rating_id: int):
 # User Endpoints
 ######################
 
-# @app.post("/users/", response_model=User)
-# def create_user_endpoint(user: UserCreate):
-#     """
-#     Creates a new user.
-#     """
-#     try:
-#         return db.create_user(user.dict())
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+class SaveUserRequest(BaseModel):
+    """
+    Data model for saving a user.
 
-# @app.get("/users/{user_id}", response_model=User)
-# def get_user_endpoint(user_id: int):
-#     """
-#     Retrieves a user by ID.
-#     """
-#     user = db.get_user(user_id)
-#     if user is None:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return user
+    Attributes:
+        user_id (int): The ID of the user.
+    """
+    user_id: int
 
-# @app.put("/users/{user_id}", response_model=User)
-# def update_user_endpoint(user_id: int, user: UserUpdate):
-#     """
-#     Updates an existing user.
-#     """
-#     try:
-#         updated_user = db.update_user(user_id, user.dict())
-#         if updated_user is None:
-#             raise HTTPException(status_code=404, detail="User not found")
-#         return updated_user
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.delete("/users/{user_id}")
-# def delete_user_endpoint(user_id: int):
-#     """
-#     Deletes a user by ID.
-#     """
-#     try:
-#         success = db.delete_user(user_id)
-#         if not success:
-#             raise HTTPException(status_code=404, detail="User not found")
-#         return {"message": "User deleted successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-    
+@app.post("/users/", response_model=db.User)
+def create_user_endpoint(user: SaveUserRequest):
+    """
+    Creates a new user.
+    """
+    try:
+        user = db.User(user_id=user.user_id)
+        return db.create_user(user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/users/{user_id}", response_model=db.User)
+def get_user_endpoint(user_id: int):
+    """
+    Retrieves a user by ID.
+    """
+    user = db.get_user(user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@app.delete("/users/{user_id}")
+def delete_user_endpoint(user_id: int):
+    """
+    Deletes a user by ID.
+    """
+    try:
+        success = db.delete_user(user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"message": "User deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 ######################
 # Watched Endpoints
 ######################
 
-# @app.post("/watched/", response_model=Watched)
-# def create_watched_endpoint(watched: WatchedCreate):
-#     """
-#     Creates a new watched entry.
-#     """
-#     try:
-#         return db.create_watched(watched.dict())
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+class SaveWatchedRequest(BaseModel):
+    """
+    Data model for saving a watched entry.
 
-# @app.get("/watched/{watched_id}", response_model=Watched)
-# def get_watched_endpoint(watched_id: int):
-#     """
-#     Retrieves a watched entry by ID.
-#     """
-#     watched = db.get_watched(watched_id)
-#     if watched is None:
-#         raise HTTPException(status_code=404, detail="Watched entry not found")
-#     return watched
+    Attributes:
+        user_id (int): The ID of the user.
+        movie_id (int): The ID of the movie.
+        rating_id (Optional[int]): The ID of the rating.
+    """
+    user_id: int
+    movie_id: int
+    rating_id: Optional[int]
 
-# @app.put("/watched/{watched_id}", response_model=Watched)
-# def update_watched_endpoint(watched_id: int, watched: WatchedUpdate):
-#     """
-#     Updates an existing watched entry.
-#     """
-#     try:
-#         updated_watched = db.update_watched(watched_id, watched.dict())
-#         if updated_watched is None:
-#             raise HTTPException(status_code=404, detail="Watched entry not found")
-#         return updated_watched
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.delete("/watched/{watched_id}")
-# def delete_watched_endpoint(watched_id: int):
-#     """
-#     Deletes a watched entry by ID.
-#     """
-#     try:
-#         success = db.delete_watched(watched_id)
-#         if not success:
-#             raise HTTPException(status_code=404, detail="Watched entry not found")
-#         return {"message": "Watched entry deleted successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+@app.post("/watched/", response_model=db.Watched)
+def create_watched_endpoint(watched: SaveWatchedRequest):
+    """
+    Creates a new watched entry.
+    """
+    try:
+
+        watched = db.Watched(
+            user_id=watched.user_id, movie_id=watched.movie_id, rating_id=watched.rating_id)
+        return db.create_watched(watched)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/watched/{watched_id}", response_model=db.Watched)
+def get_watched_endpoint(watched_id: int):
+    """
+    Retrieves a watched entry by ID.
+    """
+    watched = db.get_watched(watched_id)
+    if watched is None:
+        raise HTTPException(status_code=404, detail="Watched entry not found")
+    return watched
+
+
+@app.put("/watched/{watched_id}", response_model=db.Watched)
+def update_watched_endpoint(watched_id: int, watched: SaveWatchedRequest):
+    """
+    Updates an existing watched entry.
+    """
+    try:
+        wathced = {
+            "user_id": watched.user_id,
+            "movie_id": watched.movie_id,
+            "rating_id": watched.rating_id
+        }
+        return db.update_watched(watched_id, wathced)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/watched/{watched_id}")
+def delete_watched_endpoint(watched_id: int):
+    """
+    Deletes a watched entry by ID.
+    """
+    try:
+        success = db.delete_watched(watched_id)
+        if not success:
+            raise HTTPException(
+                status_code=404, detail="Watched entry not found")
+        return {"message": "Watched entry deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
