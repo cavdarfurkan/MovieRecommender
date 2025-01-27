@@ -6,7 +6,7 @@ import os
 import csv
 from typing import Union, Optional
 from sqlalchemy import CheckConstraint, Integer, text
-from sqlmodel import Field, Column, SQLModel, create_engine, Session, select
+from sqlmodel import Field, Column, SQLModel, create_engine, Session, select, func
 
 
 class Movie(SQLModel, table=True):
@@ -53,6 +53,49 @@ class Rating(SQLModel, table=True):
         CheckConstraint('rating >= 1 AND rating <= 5', name='check_rating'),
     )
 
+class User(SQLModel, table=True):
+    """
+    Represents a user in the database.
+
+    Attributes:
+        id (int | None): The primary key for the user table.
+        username (str): The username of the user.
+        email (str): The email address of the user.
+        password (str): The password of the user.
+    """
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int
+
+class Watched(SQLModel, table=True):
+    """
+    Represents a watched movie by a specific user.
+
+    Attributes:
+        id (int | None): The primary key of the watched record.
+        user_id (int): The ID of the user who watched the movie.
+        movie_id (int): The ID of the movie being watched.
+        timestamp (Optional[str]): The Unix timestamp indicating when the movie was watched.
+    """
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int
+    movie_id: int
+    rating_id: Optional[int]
+
+class TopNRecommendation(SQLModel, table=True):
+    """
+    Represents a top N recommendation for a specific user.
+
+    Attributes:
+        id (int | None): The primary key of the recommendation record.
+        user_id (int): The ID of the user who received the recommendation.
+        movie_id (string): Colon (|) seperated list of ID of the recommended movies.
+        prediction (string): Colon (|) seperated list of prediction score of the recommended movies.
+    """
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int
+    movie_id: str
+    prediction: str
+
 
 os.makedirs("db", exist_ok=True)
 sqlite_file_name = "db/database.db"
@@ -75,6 +118,7 @@ def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
     populate_movies()
     populate_ratings()
+    populate_users()
 
 
 def populate_movies():
@@ -91,11 +135,8 @@ def populate_movies():
     Returns:
         None: The function commits records to the database but does not return a value.
     """
-    with Session(engine) as session:
-        statement = select(Movie)
-        movies = session.exec(statement).all()
-        if len(movies) > 0:
-            return
+    if count(Movie):
+        return
 
     with open("data/u.genre", encoding="ISO-8859-1") as genre_file:
         genre_mapping = {}
@@ -143,11 +184,8 @@ def populate_ratings():
     is empty, it reads ratings from the 'data/u.data' file, parses each line to create
     Rating objects, and adds them to the database session before committing the changes.
     """
-    with Session(engine) as session:
-        statement = select(Rating)
-        ratings = session.exec(statement).all()
-        if len(ratings) > 0:
-            return
+    if count(Rating):
+        return
 
     with open("data/u.data") as f:
         ratings = []
@@ -161,6 +199,46 @@ def populate_ratings():
         for rating in ratings:
             session.add(rating)
         session.commit()
+
+def populate_users():
+    """
+    Populate the User table in the database with user data from the 'data/u.user' file.
+
+    This function checks if there are existing users in the database. If not, it reads
+    the user data file, parses each line to extract the user ID, creates a User object
+    for each user, and adds them to the database session. Finally, it commits the session
+    to save the users to the database.
+    """
+    if count(User):
+        return
+    
+    with open("data/u.user") as f:
+        users = []
+        for line in f:
+            user_id = line.split("|")[0]
+            user = User(user_id=user_id)
+            users.append(user)
+        
+    with Session(engine) as session:
+        for user in users:
+            session.add(user)
+        session.commit()
+
+def count(table: type[SQLModel]) -> bool:
+    """
+    Count the number of records in the specified table.
+
+    Args:
+        table (SQLModel): The table class to count records from.
+
+    Returns:
+        bool: True if the table has records, False otherwise.
+    """
+    with Session(engine) as session:
+        statement = select(func.count(table.id))
+        count = session.exec(statement).one()
+        print(table.__name__, count)
+        return count > 0
 
 
 ############################################
