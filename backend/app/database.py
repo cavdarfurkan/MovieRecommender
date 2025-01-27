@@ -64,7 +64,7 @@ class User(SQLModel, table=True):
         password (str): The password of the user.
     """
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int
+    user_id: int = Field(sa_column_kwargs={"unique": True})
 
 class Watched(SQLModel, table=True):
     """
@@ -80,21 +80,6 @@ class Watched(SQLModel, table=True):
     user_id: int
     movie_id: int
     rating_id: Optional[int]
-
-class TopNRecommendation(SQLModel, table=True):
-    """
-    Represents a top N recommendation for a specific user.
-
-    Attributes:
-        id (int | None): The primary key of the recommendation record.
-        user_id (int): The ID of the user who received the recommendation.
-        movie_id (string): Colon (|) seperated list of ID of the recommended movies.
-        prediction (string): Colon (|) seperated list of prediction score of the recommended movies.
-    """
-    id: int | None = Field(default=None, primary_key=True)
-    user_id: int
-    movie_id: str
-    prediction: str
 
 
 os.makedirs("db", exist_ok=True)
@@ -282,13 +267,34 @@ def get_movies(skip: int = 0, limit: int = 100) -> list[Movie]:
 
     Args:
         skip (int, optional): The number of records to skip. Defaults to 0.
-        limit (int, optional): The maximum number of records to return. Defaults to 100.
+        limit (int, optional): The maximum number of records to return. Defaults to 100. if -1, returns all.
 
     Returns:
         List[Movie]: A list of Movie instances.
     """
     with Session(engine) as session:
-        statement = select(Movie).offset(skip).limit(limit)
+        statement = select(Movie)
+
+        if limit == -1:
+            return session.exec(statement).all()
+
+        statement = statement.offset(skip).limit(limit)
+        return session.exec(statement).all()
+
+
+def get_unrated_movies_by_user(user_id: int):
+    """
+    Retrieve a list of movies that a user has not rated.
+
+    Args:
+        user_id (int): The ID of the user.
+
+    Returns:
+        list[Movie]: A list of Movie instances that the user has not rated.
+    """
+    with Session(engine) as session:
+        statement = select(Movie).where(~Movie.id.in_(
+            select(Rating.movie_id).where(Rating.user_id == user_id)))
         return session.exec(statement).all()
 
 
@@ -420,5 +426,152 @@ def delete_rating(rating_id: int) -> bool:
         if not rating:
             return False
         session.delete(rating)
+        session.commit()
+        return True
+
+
+############################################
+# User CRUD
+############################################
+
+def create_user(user_data: dict) -> User:
+    """
+    Creates a new user in the database.
+
+    Args:
+        user_data (dict): A dictionary containing user information.
+
+    Returns:
+        User: The created User object.
+    """
+    with Session(engine) as session:
+        new_user = User(**user_data)
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        return new_user
+
+def get_user(user_id: int) -> Optional[User]:
+    """
+    Retrieves a user from the database by ID.
+
+    Args:
+        user_id (int): The ID of the user to retrieve.
+
+    Returns:
+        Optional[User]: The User object if found, else None.
+    """
+    with Session(engine) as session:
+        return session.get(User, user_id)
+
+def update_user(user_id: int, update_data: dict) -> Optional[User]:
+    """
+    Updates an existing user in the database.
+
+    Args:
+        user_id (int): The ID of the user to update.
+        update_data (dict): A dictionary containing updated user information.
+
+    Returns:
+        Optional[User]: The updated User object if successful, else None.
+    """
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if not user:
+            return None
+        for key, value in update_data.items():
+            setattr(user, key, value)
+        session.commit()
+        session.refresh(user)
+        return user
+
+def delete_user(user_id: int) -> bool:
+    """
+    Deletes a user from the database.
+
+    Args:
+        user_id (int): The ID of the user to delete.
+
+    Returns:
+        bool: True if the deletion was successful, False otherwise.
+    """
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if not user:
+            return False
+        session.delete(user)
+        session.commit()
+        return True
+
+############################################
+# Watched CRUD
+############################################
+
+def create_watched(watched_data: dict) -> Watched:
+    """
+    Creates a new watched entry in the database.
+
+    Args:
+        watched_data (dict): A dictionary containing watched information.
+
+    Returns:
+        Watched: The created Watched object.
+    """
+    with Session(engine) as session:
+        new_watched = Watched(**watched_data)
+        session.add(new_watched)
+        session.commit()
+        session.refresh(new_watched)
+        return new_watched
+
+def get_watched(watched_id: int) -> Optional[Watched]:
+    """
+    Retrieves a watched entry from the database by ID.
+
+    Args:
+        watched_id (int): The ID of the watched entry to retrieve.
+
+    Returns:
+        Optional[Watched]: The Watched object if found, else None.
+    """
+    with Session(engine) as session:
+        return session.get(Watched, watched_id)
+
+def update_watched(watched_id: int, update_data: dict) -> Optional[Watched]:
+    """
+    Updates an existing watched entry in the database.
+
+    Args:
+        watched_id (int): The ID of the watched entry to update.
+        update_data (dict): A dictionary containing updated watched information.
+
+    Returns:
+        Optional[Watched]: The updated Watched object if successful, else None.
+    """
+    with Session(engine) as session:
+        watched = session.get(Watched, watched_id)
+        if not watched:
+            return None
+        for key, value in update_data.items():
+            setattr(watched, key, value)
+        session.commit()
+        session.refresh(watched)
+        return watched
+
+def delete_watched(watched_id: int) -> bool:
+    """
+    Deletes a watched entry from the database.
+
+    Args:
+        watched_id (int): The ID of the watched entry to delete.
+
+    Returns:
+        bool: True if the deletion was successful, False otherwise.
+    """
+    with Session(engine) as session:
+        watched = session.get(Watched, watched_id)
+        if not watched:
+            return False
+        session.delete(watched)
         session.commit()
         return True
