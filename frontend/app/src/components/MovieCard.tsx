@@ -1,3 +1,4 @@
+import { Movie } from "@/interfaces/types/movie";
 import Image from "next/image";
 import { useState } from "react";
 

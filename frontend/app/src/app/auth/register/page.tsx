@@ -54,8 +54,9 @@ export default function Register() {
 					router.push("/dashboard");
 				}
 			}
-		} catch (err: any) {
+		} catch (err) {
 			// Handle errors
+			console.error(err);
 			if (
 				err.response &&
 				err.response.data &&

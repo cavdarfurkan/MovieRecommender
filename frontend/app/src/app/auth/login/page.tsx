@@ -45,7 +45,8 @@ export default function SignIn() {
 				// Sign-in successful, redirect to dashboard
 				router.push("/dashboard");
 			}
-		} catch (err: any) {
+		} catch (err) {
+			console.error(err);
 			setError("An unexpected error occurred.");
 		} finally {
 			setLoading(false);
@@ -100,7 +101,7 @@ export default function SignIn() {
 					{loading ? "Signing In..." : "Sign In"}
 				</button>
 				<p className="mt-4 text-center">
-					Don't have an account?{" "}
+					Don&apos;t have an account?{" "}
 					<Link
 						href="/auth/register"
 						className="text-blue-500 hover:underline"

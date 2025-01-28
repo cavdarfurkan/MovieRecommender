@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
 	adapter: PrismaAdapter(prisma),
 	providers: [
 		CredentialsProvider({
@@ -19,6 +19,7 @@ export const authOptions: NextAuthOptions = {
 				},
 				password: { label: "Password", type: "password" },
 			},
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			async authorize(credentials, req) {
 				if (!credentials) {
 					throw new Error("No credentials provided");

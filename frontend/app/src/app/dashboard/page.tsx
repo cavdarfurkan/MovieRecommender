@@ -1,19 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSession, signOut, getSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import Image from "next/image";
 import MovieCard from "@/components/MovieCard";
-
-// interface Movie {
-// 	id: number;
-// 	title: string;
-// 	poster_url: string;
-// 	releaseDate: string;
-// 	genre: string;
-// }
 
 interface Recommendation {
 	id: number;
@@ -60,6 +52,7 @@ export default function Dashboard() {
 			fetchRecommendations();
 			fetchMoviesByGenre();
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [session]);
 
 	const fetchRecommendations = async () => {
@@ -83,6 +76,7 @@ export default function Dashboard() {
 				setRecommendations(mappedRecommendations);
 			}
 		} catch (error) {
+			console.error(error);
 			setError("Failed to fetch recommendations.");
 		}
 	};
@@ -135,6 +129,7 @@ export default function Dashboard() {
 			}
 			setMoviesByGenre(genresData);
 		} catch (error) {
+			console.error(error);
 			setError("Failed to fetch movies by genre.");
 		}
 	};
