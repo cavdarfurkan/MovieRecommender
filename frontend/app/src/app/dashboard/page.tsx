@@ -1,7 +1,7 @@
 "use client";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, getSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Image from "next/image";
@@ -90,27 +90,48 @@ export default function Dashboard() {
 	const fetchMoviesByGenre = async () => {
 		try {
 			const genresData: { [key: string]: Recommendation[] } = {};
+
 			for (const genre of genres) {
 				if (genre.name === "unknown") {
 					continue;
 				}
 
-				const res = await axios.get(
-					`http://localhost:8000/movies/genre/${genre.id}`,
-					{
-						params: { limit: 10 },
-					}
-				);
+				if (session) {
+					const userId = session.user.id;
+					const res = await axios.get(
+						`http://localhost:8000/recommendations/genre/${genre.id}`,
+						{
+							params: { user_id: userId, top_n: 10 },
+						}
+					);
 
-				const mappedMovies = res.data.map((item: any) => ({
-					id: item.movie_id,
-					title: item.movie_title,
-					genre: item.genres,
-					releaseDate: item.release_date,
-					poster_url: item.poster_url,
-				}));
+					const mappedMovies = res.data.map((item: any) => ({
+						id: item.movie.movie_id,
+						title: item.movie.movie_title,
+						genre: item.movie.genres,
+						releaseDate: item.movie.release_date,
+						poster_url: item.movie.poster_url,
+					}));
 
-				genresData[genre.name] = mappedMovies;
+					genresData[genre.name] = mappedMovies;
+				} else {
+					const res = await axios.get(
+						`http://localhost:8000/recommendations/genre/${genre.id}`,
+						{
+							params: { limit: 10 },
+						}
+					);
+
+					const mappedMovies = res.data.map((item: any) => ({
+						id: item.movie_id,
+						title: item.movie_title,
+						genre: item.genres,
+						releaseDate: item.release_date,
+						poster_url: item.poster_url,
+					}));
+
+					genresData[genre.name] = mappedMovies;
+				}
 			}
 			setMoviesByGenre(genresData);
 		} catch (error) {
@@ -118,23 +139,29 @@ export default function Dashboard() {
 		}
 	};
 
-	// const handleMarkWatched = async (movieId: number) => {
-	// 	try {
-	// 		await axios.post("/api/movies/watched", { movieId });
-	// 		fetchWatched();
-	// 	} catch (error) {
-	// 		setError("Failed to mark as watched.");
-	// 	}
-	// };
+	const handleRateMovie = async (movieId: number, rating: number) => {
+		try {
+			const session = await getSession();
 
-	// const handleRateMovie = async (movieId: number, rating: number) => {
-	// 	try {
-	// 		await axios.post("/api/movies/ratings", { movieId, rating });
-	// 		fetchRatings();
-	// 	} catch (error) {
-	// 		setError("Failed to rate movie.");
-	// 	}
-	// };
+			if (!session?.user?.id) {
+				throw new Error("User not authenticated");
+			}
+
+			const response = await axios.post("http://localhost:8000/ratings", {
+				user_id: session.user.id,
+				movie_id: movieId,
+				rating: rating,
+			});
+
+			if (response.status === 200) {
+				// Handle successful rating (e.g., show toast notification)
+				console.log("Movie rated successfully");
+			}
+		} catch (error) {
+			// Handle error (e.g., show error message)
+			console.error("Error rating movie:", error);
+		}
+	};
 
 	const recommendationsRef = useRef<HTMLDivElement>(null);
 	const genreRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -199,7 +226,13 @@ export default function Dashboard() {
 						className="flex space-x-4 overflow-x-auto scroll-smooth"
 					>
 						{recommendations.map((movie) => (
-							<MovieCard key={movie.id} movie={movie} />
+							<MovieCard
+								key={movie.id}
+								movie={movie}
+								onRateMovie={(rating) =>
+									handleRateMovie(movie.id, rating)
+								}
+							/>
 						))}
 					</div>
 				</section>
@@ -255,6 +288,12 @@ export default function Dashboard() {
 										<MovieCard
 											key={movie.id}
 											movie={movie}
+											onRateMovie={(rating) =>
+												handleRateMovie(
+													movie.id,
+													rating
+												)
+											}
 										/>
 									))}
 								</div>
@@ -264,140 +303,4 @@ export default function Dashboard() {
 			</div>
 		</ProtectedRoute>
 	);
-
-	// return (
-	// 	<ProtectedRoute>
-	// 		<div className="min-h-screen p-4">
-	// <header className="flex justify-between items-center mb-6">
-	// 	<h1 className="text-3xl">Dashboard</h1>
-	// 	<button
-	// 		onClick={() => signOut()}
-	// 		className="bg-red-500 text-white px-3 py-1 rounded"
-	// 	>
-	// 		Sign Out
-	// 	</button>
-	// </header>
-
-	// 			{error && <p className="text-red-500">{error}</p>}
-
-	// 			<section className="mb-6">
-	// 				<h2 className="text-2xl mb-4">Mark Movies as Watched</h2>
-	// 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-	// 					{movies.map((movie) => (
-	// 						<div
-	// 							key={movie.id}
-	// 							className="bg-white p-4 rounded shadow"
-	// 						>
-	// 							<h3 className="text-xl">{movie.title}</h3>
-	// 							<p className="text-gray-600">
-	// 								{movie.genre} | {movie.releaseDate}
-	// 							</p>
-	// 							<button
-	// 								onClick={() => handleMarkWatched(movie.id)}
-	// 								className="mt-2 bg-blue-500 text-white px-2 py-1 rounded"
-	// 							>
-	// 								Mark as Watched
-	// 							</button>
-	// 						</div>
-	// 					))}
-	// 				</div>
-	// 			</section>
-
-	// 			<section className="mb-6">
-	// 				<h2 className="text-2xl mb-4">Your Watched Movies</h2>
-	// 				{watched.length === 0 ? (
-	// 					<p>You haven&apos;t marked any movies as watched.</p>
-	// 				) : (
-	// 					<ul>
-	// 						{watched.map((w) => (
-	// 							<li key={w.id} className="mb-2">
-	// 								{w.movie.title} - Watched at:{" "}
-	// 								{new Date(w.watchedAt).toLocaleString()}
-	// 							</li>
-	// 						))}
-	// 					</ul>
-	// 				)}
-	// 			</section>
-
-	// 			<section className="mb-6">
-	// 				<h2 className="text-2xl mb-4">Rate Movies</h2>
-	// 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-	// 					{movies.map((movie) => (
-	// 						<div
-	// 							key={movie.id}
-	// 							className="bg-white p-4 rounded shadow"
-	// 						>
-	// 							<h3 className="text-xl">{movie.title}</h3>
-	// 							<p className="text-gray-600">
-	// 								{movie.genre} | {movie.releaseDate}
-	// 							</p>
-	// 							<div className="mt-2">
-	// 								<label className="block mb-1">
-	// 									Your Rating:
-	// 								</label>
-	// 								<select
-	// 									onChange={(e) =>
-	// 										handleRateMovie(
-	// 											movie.id,
-	// 											parseInt(e.target.value)
-	// 										)
-	// 									}
-	// 									className="w-full border px-2 py-1 rounded"
-	// 									defaultValue=""
-	// 								>
-	// 									<option value="" disabled>
-	// 										Select rating
-	// 									</option>
-	// 									{[1, 2, 3, 4, 5].map((num) => (
-	// 										<option key={num} value={num}>
-	// 											{num}
-	// 										</option>
-	// 									))}
-	// 								</select>
-	// 							</div>
-	// 						</div>
-	// 					))}
-	// 				</div>
-	// 			</section>
-
-	// 			<section className="mb-6">
-	// 				<h2 className="text-2xl mb-4">Your Ratings</h2>
-	// 				{ratings.length === 0 ? (
-	// 					<p>You haven&apos;t rated any movies.</p>
-	// 				) : (
-	// 					<ul>
-	// 						{ratings.map((r) => (
-	// 							<li key={r.id} className="mb-2">
-	// 								{r.movie.title} - Rating: {r.rating} - Rated
-	// 								at: {new Date(r.ratedAt).toLocaleString()}
-	// 							</li>
-	// 						))}
-	// 					</ul>
-	// 				)}
-	// 			</section>
-
-	// 			<section className="mb-6">
-	// 				<h2 className="text-2xl mb-4">Recommended for You</h2>
-	// 				{recommendations.length === 0 ? (
-	// 					<p>No recommendations available.</p>
-	// 				) : (
-	// 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-	// 						{recommendations.map((movie) => (
-	// 							<div
-	// 								key={movie.id}
-	// 								className="bg-white p-4 rounded shadow"
-	// 							>
-	// 								<h3 className="text-xl">{movie.title}</h3>
-	// 								<p className="text-gray-600">
-	// 									{movie.genre} | {movie.releaseDate}
-	// 								</p>
-	// 								{/* Add more details or actions as needed */}
-	// 							</div>
-	// 						))}
-	// 					</div>
-	// 				)}
-	// 			</section>
-	// 		</div>
-	// 	</ProtectedRoute>
-	// );
 }
