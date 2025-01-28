@@ -1,4 +1,8 @@
 fastapi==0.115.7
+fastapi-cli==0.0.7
+pandas==2.2.3
 pydantic==2.10.6
+scikit_surprise==1.1.4
 SQLAlchemy==2.0.37
 sqlmodel==0.0.22
+numpy==1.26.4

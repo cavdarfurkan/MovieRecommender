@@ -23,10 +23,10 @@ export async function POST(request: Request) {
 	if (existingUser) {
 		// Check if existsting user also exists on the backend, if not create it
 		const existingUserOnBackend = await axios.get(
-			`http://localhost:8000/users/${existingUser.id}`
+			`http://0.0.0.0:8000/users/${existingUser.id}`
 		);
 		if (!existingUserOnBackend) {
-			await axios.post("http://localhost:8000/users", {
+			await axios.post("http://0.0.0.0:8000/users", {
 				user_id: existingUser.id,
 			});
 		}
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 		});
 
 		// Also create the user on backend
-		await axios.post("http://localhost:8000/users", {
+		await axios.post("http://0.0.0.0:8000/users", {
 			user_id: user.id,
 		});
 
