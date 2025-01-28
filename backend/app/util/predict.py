@@ -2,13 +2,14 @@
 Util functions for predictions
 """
 
-import sys
 import os
+import sys
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
 import database as db
+
 
 def predict_for_user(model, user_id: int, movie_id: int):
     """Get the recommendations for a use"""
@@ -16,15 +17,33 @@ def predict_for_user(model, user_id: int, movie_id: int):
     prediction = model.predict(user_id, movie_id)
     return prediction
 
+
 def predict_top_n_for_user(model, user_id: int, top_n: int):
     """Get the top N recommendations for a user"""
 
     all_unrated_movies = db.get_unrated_movies_by_user(user_id)
 
-    predictions = [model.predict(user_id, movie.movie_id) for movie in all_unrated_movies]
+    predictions = [model.predict(user_id, movie.movie_id)
+                   for movie in all_unrated_movies]
 
     sorted_predictions = sorted(predictions, key=lambda x: x.est, reverse=True)
-    
+
+    top_n_recommendations = sorted_predictions[:top_n]
+
+    return top_n_recommendations
+
+
+def predict_top_n_for_user_by_genre(model, user_id: int, top_n: int, genre_id: str):
+    """Get the top N recommendations for a user by genre"""
+
+    all_unrated_movies = db.get_unrated_movies_by_user_and_genre(
+        user_id, genre_id)
+
+    predictions = [model.predict(user_id, movie.movie_id)
+                   for movie in all_unrated_movies]
+
+    sorted_predictions = sorted(predictions, key=lambda x: x.est, reverse=True)
+
     top_n_recommendations = sorted_predictions[:top_n]
 
     return top_n_recommendations

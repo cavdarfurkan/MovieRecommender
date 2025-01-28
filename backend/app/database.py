@@ -326,7 +326,6 @@ def get_movies_by_genre(genre_id: int, skip: int = 0, limit: int = 10) -> list[M
     with Session(engine) as session:
         statement = select(Genre).where(Genre.id == genre_id)
         genre = session.exec(statement).first().genre
-        print(genre)
 
     if not genre:
         return []
@@ -350,6 +349,31 @@ def get_unrated_movies_by_user(user_id: int):
     with Session(engine) as session:
         statement = select(Movie).where(~Movie.id.in_(
             select(Rating.movie_id).where(Rating.user_id == user_id)))
+        return session.exec(statement).all()
+
+
+def get_unrated_movies_by_user_and_genre(user_id: int, genre_id: str):
+    """
+    Retrieve a list of movies that a user has not rated in a specific genre.
+
+    Args:
+        user_id (int): The ID of the user.
+        genre_id (int): The genre ID to filter by.
+
+    Returns:
+        list[Movie]: A list of Movie instances that the user has not rated in the specified genre.
+    """
+    genre = ""
+    with Session(engine) as session:
+        statement = select(Genre).where(Genre.id == genre_id)
+        genre = session.exec(statement).first().genre
+
+    if not genre:
+        return []
+
+    with Session(engine) as session:
+        statement = select(Movie).where(~Movie.id.in_(
+            select(Rating.movie_id).where(Rating.user_id == user_id))).where(Movie.genres.like(f"%{genre}%"))
         return session.exec(statement).all()
 
 

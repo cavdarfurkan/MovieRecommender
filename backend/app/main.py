@@ -155,7 +155,6 @@ def get_recommendations(user_id: int, top_n: int = 10):
 
         recommendations = []
         for rec in user_recs:
-            print(rec)
             movie = db.get_movie(rec.iid)
             rec = Recommendation(
                 movie=movie,
@@ -164,6 +163,37 @@ def get_recommendations(user_id: int, top_n: int = 10):
             recommendations.append(rec)
 
         return recommendations
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/recommendations/genre/{genre_id}", response_model=list[Recommendation])
+def get_recommendations_by_genre(genre_id: int, user_id: int, top_n: int = 10, skip: int = 0):
+    """
+    Get movie recommendations for a given genre.
+
+    Args:
+        genre_id (int): The genre id of movies.
+        user_id (int): The ID of the user for whom recommendations are requested.
+        top_n (int, optional): Number of top recommendations to return. Defaults to 10.
+        skip (int, optional): Number of movies to skip. Defaults to 0.
+
+    Returns:
+        List[Movie]: A list of movies in the specified genre.
+    """
+    try:
+        user_recs = predict.predict_top_n_for_user_by_genre(
+            model, user_id=user_id, top_n=(top_n+skip), genre_id=genre_id)
+
+        recommendations = []
+        for rec in user_recs:
+            movie = db.get_movie(rec.iid)
+            rec = Recommendation(
+                movie=movie,
+                prediction_rating=rec.est
+            )
+            recommendations.append(rec)
+        return recommendations[skip:]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

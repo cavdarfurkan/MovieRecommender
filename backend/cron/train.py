@@ -5,7 +5,7 @@ from surprise.model_selection import train_test_split
 
 # Load data
 ratings_df = pd.read_csv('./rating_export.csv',
-                         names=['user_id', 'movie_id', 'rating'])
+                         names=['id', 'user_id', 'movie_id', 'rating', 'timestamp'])
 
 reader = Reader(rating_scale=(1, 5))
 data = Dataset.load_from_df(
